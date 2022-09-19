@@ -16,4 +16,7 @@ migrateup:
 migratedown:
 	migrate -path db/migration -database "postgresql://$(E):$(E)@localhost:5433/bank?sslmode=disable" --verbose down $(V)
 
-.PHONY: make-pg start-pg createdb dropdb migrateup migratedown
+sqlc:
+	sqlc generate
+
+.PHONY: make-pg start-pg createdb dropdb migrateup migratedown sqlc
