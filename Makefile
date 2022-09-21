@@ -22,4 +22,7 @@ sqlc:
 test:
 	go test -v -cover ./...
 
-.PHONY: make-pg start-pg createdb dropdb migrateup migratedown sqlc test
+server:
+	go run main.go
+
+.PHONY: make-pg start-pg createdb dropdb migrateup migratedown sqlc test server
