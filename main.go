@@ -4,19 +4,19 @@ import (
 	"database/sql"
 	db "dbapp/db/sqlc"
 	"dbapp/src"
+	"dbapp/utils"
 	"log"
 
 	_ "github.com/lib/pq"
 )
 
-const (
-	address  = "0.0.0.0:80"
-	dbDriver = "postgres"
-	dbSource = "postgresql://postgres:postgres@localhost:5433/bank?sslmode=disable"
-)
-
 func main() {
-	conn, err := sql.Open(dbDriver, dbSource)
+	config, err := utils.LoadConfig(".")
+	if err != nil {
+		log.Fatal("ERROR cannot load env === ", err)
+	}
+
+	conn, err := sql.Open(config.DBDriver, config.DBSource)
 
 	if err != nil {
 		log.Fatal("ERROR cannot connect db === ", err)
@@ -25,7 +25,7 @@ func main() {
 	store := db.NewStore(conn)
 	server := src.NewServer(store)
 
-	serverErr := server.StartServer(address)
+	serverErr := server.StartServer(config.ServerAdress)
 
 	if serverErr != nil {
 		log.Fatal("ERROR cannot start server === ", serverErr)

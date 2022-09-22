@@ -2,16 +2,12 @@ package db
 
 import (
 	"database/sql"
+	"dbapp/utils"
 	"log"
 	"os"
 	"testing"
 
 	_ "github.com/lib/pq"
-)
-
-const (
-	dbDriver = "postgres"
-	dbSource = "postgresql://postgres:postgres@localhost:5433/bank?sslmode=disable"
 )
 
 var (
@@ -20,11 +16,14 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	var err error
-	testDB, err = sql.Open(dbDriver, dbSource)
-
+	config, err := utils.LoadConfig("../..")
 	if err != nil {
-		log.Fatal("cannot connect db === ", err)
+		log.Fatal("ERROR: cannot load env === ", err)
+	}
+
+	testDB, err = sql.Open(config.DBDriver, config.DBSource)
+	if err != nil {
+		log.Fatal("ERROR: cannot connect db === ", err)
 	}
 
 	testQueries = New(testDB)
