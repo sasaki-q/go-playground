@@ -13,8 +13,10 @@ import (
 var ctx = context.Background()
 
 func createAccountByTest(t *testing.T) Account {
+	user := createUserByTest(t)
+
 	param := CreateAccountParams{
-		Owner:    util.RandomOwner(),
+		Owner:    user.Username,
 		Balance:  util.RandomMoney(),
 		Currency: util.RandomCurrency(),
 	}
