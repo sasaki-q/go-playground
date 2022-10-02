@@ -2,6 +2,8 @@ package src
 
 import (
 	db "dbapp/db/sqlc"
+	"dbapp/factory"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,21 +23,19 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	err = ctx.ShouldBindJSON(&req)
 	if err != nil {
-		ctx.JSON(
-			http.StatusBadRequest,
-			errorResponse(err),
-		)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
+	payload := ctx.MustGet(authorizationPayloadKey).(*factory.Payload)
+
 	param := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    payload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
 
 	account, err := server.store.CreateAccount(ctx, param)
-
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code.Name() {
@@ -63,20 +63,20 @@ func (server *Server) getAccount(ctx *gin.Context) {
 
 	err = ctx.ShouldBindUri(&req)
 	if err != nil {
-		ctx.JSON(
-			http.StatusBadRequest,
-			errorResponse(err),
-		)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
 	account, err := server.store.SelectAccount(ctx, req.ID)
-
 	if err != nil {
-		ctx.JSON(
-			http.StatusInternalServerError,
-			errorResponse(err),
-		)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*factory.Payload)
+	if account.Owner != payload.Username {
+		err := errors.New("account is not authenticated user's account")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
 	}
 

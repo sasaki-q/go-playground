@@ -3,6 +3,8 @@ package src
 import (
 	"database/sql"
 	db "dbapp/db/sqlc"
+	"dbapp/factory"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -34,12 +36,21 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		Amount:        req.Amount,
 	}
 
-	if !server.validateAccount(ctx, req.ToAccountID, req.Currency) {
+	account, valid := server.validateAccount(ctx, req.FromAccountID, req.Currency)
+	if !valid {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	if !server.validateAccount(ctx, req.FromAccountID, req.Currency) {
+	payload := ctx.MustGet(authorizationPayloadKey).(*factory.Payload)
+	if account.Owner != payload.Username {
+		err := errors.New("account is not authenticated user's account")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	_, valid = server.validateAccount(ctx, req.ToAccountID, req.Currency)
+	if !valid {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -57,23 +68,23 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
-func (server *Server) validateAccount(ctx *gin.Context, accountID int64, currency string) bool {
+func (server *Server) validateAccount(ctx *gin.Context, accountID int64, currency string) (db.Account, bool) {
 	account, err := server.store.SelectAccount(ctx, accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return false
+			return account, false
 		}
 
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return false
+		return account, false
 	}
 
 	if account.Currency != currency {
 		err := fmt.Errorf("account %d currency mismatch %s vs %s", accountID, account.Currency, currency)
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return false
+		return account, false
 	}
 
-	return true
+	return account, true
 }
